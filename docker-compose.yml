@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ouaa
+      POSTGRES_PASSWORD: ouaa
+      POSTGRES_DB: ouaa
+    ports: ["5432:5432"]
+    volumes: [ "dbdata:/var/lib/postgresql/data" ]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  api:
+    build: .
+    environment:
+      API_KEY: "CHANGE_ME_SECRET"
+      DATABASE_URL: "postgresql://ouaa:ouaa@db:5432/ouaa"       
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      MAX_BODY_MB: "20"
+    depends_on: [ db, redis ]
+    ports: ["8000:8000"]
+
+  worker:
+    build: .
+    command: ["celery", "-A", "app.tasks:celery_app", "worker", "--loglevel=INFO"]
+    environment:
+      DATABASE_URL: "postgresql://ouaa:ouaa@db:5432/ouaa"       
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+    depends_on: [ db, redis ]
+
+volumes:
+  dbdata:
